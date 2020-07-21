@@ -1,7 +1,9 @@
 import logging
 import socket
 
-from cogstream.net import recv_packet, send_packet
+from cogstream.engine import StreamType
+from cogstream.net import recv_packet, send_packet, send_message, recv_message
+from cogstream.protocol import StartMessage, FormatMessage, TransformResponseMessage
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +13,7 @@ class Client:
         super().__init__()
         self.address = address
         self.sock = None
+        self.handshake = False
 
     def open(self):
         if self.sock is not None:
@@ -22,19 +25,28 @@ class Client:
         sock.connect(address)
 
         try:
-            sock.send(b'startstream\n')
-            msg = recv_packet(sock)
-            logger.info('got message %s', msg)
-            if msg != b'ok!':
-                logger.warning('protocol error')
-                sock.close()
-                return
+            # client: startstream ...
+            start_msg = StartMessage(StreamType.frames, 'yolo')  # TODO: pass engine
+            logger.info('sending: %s', start_msg)
+            send_message(sock, start_msg)
+
+            # server: ok w=<width> h=<height> ...
+            format_msg = recv_message(sock, FormatMessage)
+            logger.info('received: %s', format_msg)
+
+            # client: ok you|me
+            # TODO: check whether we can do transformation locally
+            transform_msg = TransformResponseMessage(server_side=True)
+            logger.info('sending: %s', transform_msg)
+            send_message(sock, transform_msg)
         except:
+            logger.exception('error during handshake')
             sock.close()
             return
 
-        logger.info('client-server handshake complete')
+        logger.info('client-server handshake successful')
         self.sock = sock
+        self.handshake = True
 
     def close(self):
         if self.sock is None:

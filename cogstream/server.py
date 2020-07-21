@@ -2,12 +2,14 @@ import logging
 import socket
 import time
 
-from cogstream.net import send_packet, recv_packet
+from cogstream.engine import load_engine
+from cogstream.net import send_packet, recv_packet, recv_message, send_message
+from cogstream.protocol import StartMessage, ProtocolError, FormatMessage, TransformResponseMessage
 
 logger = logging.getLogger(__name__)
 
 
-def start_stream(conn):
+def start_stream(conn, engine, do_transform=False):
     while True:
         then = time.time()
         buf = recv_packet(conn)
@@ -36,19 +38,32 @@ def serve(address):
             conn, addr = server_socket.accept()
             logger.info('initiating handshake with %s', addr)
 
-            data = conn.recv(1024)
-            if data:
-                msg = data.decode('utf-8')
+            try:
+                # client: startstream ...
+                start_msg = recv_message(conn, StartMessage)
+                logger.info('received: %s', start_msg)
 
-                if msg.startswith('startstream'):
-                    try:
-                        send_packet(conn, b'ok!')
-                        start_stream(conn)
-                    except:
-                        logger.exception('exception while streaming')
-                        break
-                else:
-                    logger.warning('protocol error')
+                # server: ok w=<width> h=<height> ...
+                try:
+                    engine = load_engine(start_msg.engine)
+                except ValueError:
+                    raise ProtocolError('unknown engine %s' % start_msg.engine)
+
+                shape = engine.shape()
+                format_msg = FormatMessage(shape[0], shape[1], engine.colorspace(), engine.transformation())
+                logger.info('sending: %s', format_msg)
+                send_message(conn, format_msg)
+
+                # client: ok you|me
+                transform_msg = recv_message(conn, TransformResponseMessage)
+                logger.info('received: %s', transform_msg)
+
+                logger.info('client-server handshake successful, starting stream')
+                start_stream(conn, engine, do_transform=transform_msg.server_side)
+            except ProtocolError:
+                logger.exception('protocol error, closing connection %s', addr)
+                conn.close()
+                continue
 
             logger.info('closing connection %s', addr)
             conn.close()
