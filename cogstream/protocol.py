@@ -163,7 +163,7 @@ def serialize_image(img: Image.Image):
     mode = img.mode
     w, h = img.size
 
-    data: bytes = img.tobytes()
+    data = img.tobytes()
 
     prefix = ('%s,%d,%d\n' % (mode, w, h)).encode('UTF-8')
 
@@ -172,8 +172,6 @@ def serialize_image(img: Image.Image):
 
 def parse_image(arr: bytes):
     header, data = arr.split(b'\n', 1)
-
-    print(header)
 
     mode, w, h = header.decode('UTF-8').split(',')
     w = int(w)
