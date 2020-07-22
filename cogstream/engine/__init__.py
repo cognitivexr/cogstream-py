@@ -1,4 +1,5 @@
 from cogstream.engine.engine import StreamType, Colorspace, Transformation, Engine
+from cogstream.engine.mobilenet.engine import MobileNetEngine
 from cogstream.engine.yolo.engine import YoloEngine
 
 name = 'engine'
@@ -12,7 +13,8 @@ __all__ = [
 ]
 
 _engines = {
-    'yolo': YoloEngine
+    'yolo': YoloEngine,
+    'mobilenet': MobileNetEngine
 }
 
 _running = dict()
