@@ -200,11 +200,12 @@ def iou(box1, box2):
     return IoU
 
 
-def make_interpreter(model_path, use_tpu=False):
+def make_interpreter(use_tpu=False):
     if use_tpu:
-        interpreter = tflite.Interpreter(model_path, experimental_delegates=[tflite.load_delegate(EDGETPU_SHARED_LIB)])
+        interpreter = tflite.Interpreter(path_model_tpu,
+                                         experimental_delegates=[tflite.load_delegate(EDGETPU_SHARED_LIB)])
     else:
-        interpreter = tflite.Interpreter(model_path)
+        interpreter = tflite.Interpreter(path_model)
 
     return interpreter
 

@@ -29,7 +29,7 @@ class YoloEngine(Engine):
             driver = driver_import
             driver.require_model()
 
-        interpreter = driver.make_interpreter(driver.path_model, use_tpu=self.use_tpu)
+        interpreter = driver.make_interpreter(use_tpu=self.use_tpu)
         interpreter.allocate_tensors()
 
         anchors = driver.get_anchors(driver.path_anchors)
