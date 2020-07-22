@@ -1,3 +1,4 @@
+import json
 import logging
 import socket
 import time
@@ -7,6 +8,17 @@ from cogstream.net import send_packet, recv_packet, recv_message, send_message
 from cogstream.protocol import StartMessage, ProtocolError, FormatMessage, TransformResponseMessage, parse_image
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_result(result):
+    # TODO: serialize the result properly
+
+    boxes, scores, classes = result
+    scores = [float(x) for x in scores]
+    classes = [int(x) for x in classes]
+    payload = json.dumps({'boxes': '', 'scores': scores, 'classes': classes}).encode('UTF-8')
+
+    return payload
 
 
 def start_stream(conn, engine, do_transform=False):
@@ -30,14 +42,14 @@ def start_stream(conn, engine, do_transform=False):
             logger.exception('inference: exception')
             continue
 
-        # TODO: send back the result properly
-        payload = ('%s' % result).encode('UTF-8')
+        payload = serialize_result(result)
         send_packet(conn, payload)
 
 
 def serve(address):
     logger.info('starting server on address %s', address)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(address)
     server_socket.listen(1)
 
