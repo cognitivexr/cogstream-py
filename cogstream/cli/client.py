@@ -3,7 +3,6 @@ import logging
 import os
 import time
 
-import numpy as np
 from PIL import Image
 
 from cogstream.client import Client
@@ -21,6 +20,9 @@ def stream_directory(client, source):
         then = time.time()
 
         img: Image.Image = Image.open(fd)
+        # for testing the effect on latency if we do filtering on the client:
+        # from cogstream.engine.yolo.tflite import letterbox_image_pil
+        # img = letterbox_image_pil(img, (416, 416))
         response = client.request(img)
 
         logger.info('%s: %s (%.2fms)', f, response, ((time.time() - then) * 1000))
