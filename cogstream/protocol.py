@@ -40,8 +40,6 @@ class ControlMessage(ABC):
 
 
 class StartMessage(ControlMessage):
-    stream_type: StreamType
-    engine: str
 
     def __init__(self, stream_type, engine) -> None:
         super().__init__()
@@ -69,10 +67,6 @@ class StartMessage(ControlMessage):
 
 
 class FormatMessage(ControlMessage):
-    width: int
-    height: int
-    colorspace: Colorspace
-    transformation: Transformation
 
     def __init__(self, width, height, colorspace=Colorspace.unknown, transformation=Transformation.unknown) -> None:
         super().__init__()
@@ -138,7 +132,6 @@ class FormatMessage(ControlMessage):
 
 
 class TransformResponseMessage(ControlMessage):
-    server_side: bool
 
     def __init__(self, server_side=False) -> None:
         self.server_side = server_side
