@@ -21,9 +21,7 @@ def stream_directory(client, source):
         then = time.time()
 
         img: Image.Image = Image.open(fd)
-        arr = np.asarray(img)
-        print(arr)
-        response = client.request(img.tobytes())
+        response = client.request(img)
 
         logger.info('%s: %s (%.2fms)', f, response, ((time.time() - then) * 1000))
 

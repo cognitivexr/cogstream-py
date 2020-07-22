@@ -4,6 +4,8 @@ Protocol implementation.
 from abc import ABC
 from typing import Dict
 
+from PIL import Image
+
 from cogstream.engine import StreamType, Colorspace, Transformation
 
 '''
@@ -161,5 +163,27 @@ def to_kv_string(data: Dict):
     return ' '.join(['%s=%s' % (k, v) for k, v in data.items()])
 
 
-if __name__ == '__main__':
-    print(FormatMessage.parse(FormatMessage(123, 456, Colorspace.rgb).serialize()))
+# TODO: frame stream protocol needs to be optimized (e.g. by different stream types, with an option for dynamic streams,
+#  where each frame contains the frame shape, otherwise negotiate the frame format before initializing the stream).
+
+def serialize_image(img: Image.Image):
+    mode = img.mode
+    w, h = img.size
+
+    data: bytes = img.tobytes()
+
+    prefix = ('%s,%d,%d\n' % (mode, w, h)).encode('UTF-8')
+
+    return prefix + data
+
+
+def parse_image(arr: bytes):
+    header, data = arr.split(b'\n', 1)
+
+    print(header)
+
+    mode, w, h = header.decode('UTF-8').split(',')
+    w = int(w)
+    h = int(h)
+
+    return Image.frombytes(mode, (w, h), data)

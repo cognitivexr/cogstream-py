@@ -3,7 +3,7 @@ import socket
 
 from cogstream.engine import StreamType
 from cogstream.net import recv_packet, send_packet, send_message, recv_message
-from cogstream.protocol import StartMessage, FormatMessage, TransformResponseMessage
+from cogstream.protocol import StartMessage, FormatMessage, TransformResponseMessage, serialize_image
 
 logger = logging.getLogger(__name__)
 
@@ -55,5 +55,6 @@ class Client:
         self.sock.close()
 
     def request(self, frame):
-        send_packet(self.sock, frame)
+        payload = serialize_image(frame)
+        send_packet(self.sock, payload)
         return recv_packet(self.sock)

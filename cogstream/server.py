@@ -4,7 +4,7 @@ import time
 
 from cogstream.engine import load_engine
 from cogstream.net import send_packet, recv_packet, recv_message, send_message
-from cogstream.protocol import StartMessage, ProtocolError, FormatMessage, TransformResponseMessage
+from cogstream.protocol import StartMessage, ProtocolError, FormatMessage, TransformResponseMessage, parse_image
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,20 @@ def start_stream(conn, engine, do_transform=False):
 
         logger.debug('receiving packet with %d bytes took %.2fms', len(buf), ((time.time() - then) * 1000))
 
-        # TODO: do inference
+        try:
+            then = time.time()
+            img = parse_image(buf)
+            logger.debug('parsing image took %.2fms', ((time.time() - then) * 1000))
 
-        # TODO: send back the result
-        send_packet(conn, b'ok')
+            result = engine.inference(img)
+            logger.debug('inference: result %s', result)
+        except:
+            logger.exception('inference: exception')
+            continue
+
+        # TODO: send back the result properly
+        payload = ('%s' % result).encode('UTF-8')
+        send_packet(conn, payload)
 
 
 def serve(address):
