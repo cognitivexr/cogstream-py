@@ -1,15 +1,9 @@
-# RUN WITH:
-# python3 inference-simple.py --tpu --model models/quant_coco-tiny-v3-relu_edgetpu.tflite --quant --anchors cfg/tiny_yolo_anchors.txt --classes cfg/coco.names --image ../demo/images/
+# MODIFIED CODE FROM https://github.com/guichristmann/edge-tpu-tiny-yolo
 
-# model path for TPU = models/quant_coco-tiny-v3-relu_edgetpu.tflite
-# model path         = models/quant_coco-tiny-v3-relu.tflite
-# classes = cfg/coco.names
-# anchors = cfg/tiny_yolo_anchors.txt
-
-
-import argparse
+import logging
 import os
 import time
+from urllib.request import urlretrieve
 
 import numpy as np
 import tflite_runtime.interpreter as tflite
@@ -17,25 +11,35 @@ from PIL import Image
 
 EDGETPU_SHARED_LIB = "libedgetpu.so.1"
 
-_root = os.path.dirname(__file__)
-path_model = os.path.join(_root, 'model', 'quant_coco-tiny-v3-relu.tflite')
-path_model_tpu = os.path.join(_root, 'model', 'quant_coco-tiny-v3-relu_edgetpu.tflite')
-path_classes = os.path.join(_root, 'model', 'coco.names')
-path_anchors = os.path.join(_root, 'model', 'tiny_yolo_anchors.txt')
-
-
-def download():
-    # TODO: makedir
-    # TODO: download
-
-    # 'https://raw.githubusercontent.com/edgerun/edge-tpu-tiny-yolo/master/cfg/coco.names' -> path_classes
-    # 'https://raw.githubusercontent.com/edgerun/edge-tpu-tiny-yolo/master/cfg/tiny_yolo_anchors.txt' -> path_anchors
-    # 'https://raw.githubusercontent.com/edgerun/edge-tpu-tiny-yolo/master/models/quant_coco-tiny-v3-relu.tflite' -> path_model
-    # 'https://raw.githubusercontent.com/edgerun/edge-tpu-tiny-yolo/master/models/quant_coco-tiny-v3-relu_edgetpu.tflite ' -> path_model
-    pass
-
 # Maximum number of boxes. Only the top scoring ones will be considered.
 MAX_BOXES = 30
+
+logger = logging.getLogger(__name__)
+
+_root = os.path.join(os.path.dirname(__file__), 'model')
+
+path_model = os.path.join(_root, 'quant_coco-tiny-v3-relu.tflite')
+path_model_tpu = os.path.join(_root, 'quant_coco-tiny-v3-relu_edgetpu.tflite')
+path_classes = os.path.join(_root, 'coco.names')
+path_anchors = os.path.join(_root, 'tiny_yolo_anchors.txt')
+
+
+def urlretrieve_ifne(url, filename):
+    if not os.path.exists(filename):
+        logger.info('downloading %s into %s', url, filename)
+        urlretrieve(url, filename)
+
+
+def require_model():
+    if not os.path.exists(_root):
+        os.mkdir(_root)
+
+    repo = 'https://raw.githubusercontent.com/edgerun/edge-tpu-tiny-yolo/master'
+
+    urlretrieve_ifne('%s/models/quant_coco-tiny-v3-relu.tflite' % repo, path_model)
+    urlretrieve_ifne('%s/models/quant_coco-tiny-v3-relu_edgetpu.tflite' % repo, path_model_tpu)
+    urlretrieve_ifne('%s/cfg/coco.names' % repo, path_classes)
+    urlretrieve_ifne('%s/cfg/tiny_yolo_anchors.txt' % repo, path_anchors)
 
 
 def sigmoid(x):
@@ -62,7 +66,7 @@ def letterbox_image_pil(image, size):
     return new_image
 
 
-def featuresToBoxes(outputs, anchors, n_classes, net_input_shape, img_orig_shape, threshold):
+def features_to_boxes(outputs, anchors, n_classes, net_input_shape, img_orig_shape, threshold):
     grid_shape = outputs.shape[1:3]
     n_anchors = len(anchors)
 
@@ -207,8 +211,7 @@ def make_interpreter(model_path, use_tpu=False):
 
 # Run YOLO inference on the image, returns detected boxes
 def inference(interpreter, img, anchors, n_classes, threshold, quant=True):
-    input_details, output_details, net_input_shape = \
-        get_interpreter_details(interpreter)
+    input_details, output_details, net_input_shape = get_interpreter_details(interpreter)
 
     img_orig_shape = img.size
     # Crop frame to network input shape
@@ -248,10 +251,10 @@ def inference(interpreter, img, anchors, n_classes, threshold, quant=True):
 
     # Get boxes from outputs of network
     start = time.time()
-    _boxes1, _scores1, _classes1 = featuresToBoxes(out1, anchors[[3, 4, 5]],
-                                                   n_classes, net_input_shape, img_orig_shape, threshold)
-    _boxes2, _scores2, _classes2 = featuresToBoxes(out2, anchors[[1, 2, 3]],
-                                                   n_classes, net_input_shape, img_orig_shape, threshold)
+    _boxes1, _scores1, _classes1 = features_to_boxes(out1, anchors[[3, 4, 5]],
+                                                     n_classes, net_input_shape, img_orig_shape, threshold)
+    _boxes2, _scores2, _classes2 = features_to_boxes(out2, anchors[[1, 2, 3]],
+                                                     n_classes, net_input_shape, img_orig_shape, threshold)
     inf_time = time.time() - start
     print("Box computation time:", inf_time * 1000)
 
@@ -283,46 +286,3 @@ def get_interpreter_details(interpreter):
     input_shape = input_details[0]["shape"]
 
     return input_details, output_details, input_shape
-
-
-def do_inference(interpreter, anchors, stream, classes, threshold):
-    """
-    Run inference on the image using pill
-    :param interpreter:
-    :param anchors:
-    :param stream:
-    :param classes:
-    :param threshold:
-    :return:
-    """
-    input_details, output_details, input_shape = get_interpreter_details(interpreter)
-
-    n_classes = len(classes)
-    img = Image.open(stream)
-
-    # Run inference, get boxes
-    boxes, scores, pred_classes = inference(interpreter, img, anchors, n_classes, threshold)
-
-    print(stream, boxes, scores, pred_classes)
-
-
-def main():
-    anchors = get_anchors(path_anchors)
-    classes = get_classes(path_classes)
-
-    # Generate random colors for each detection
-    colors = np.random.uniform(30, 255, size=(len(classes), 3))
-
-    interpreter = make_interpreter(path_model, use_tpu=False) # TODO
-    interpreter.allocate_tensors()
-
-    image_dir = '~/' # TODO
-
-    for f in os.listdir(image_dir):
-        img_path = os.path.join(image_dir, f)
-
-        start_time = time.time()
-        do_inference(interpreter, anchors, img_path, classes, threshold=0.25)
-        elapsed_ms = (time.time() - start_time) * 1000
-        annotate_text = '%-15s took %.1fms' % (f, elapsed_ms)
-        print(annotate_text)

@@ -1,3 +1,6 @@
+# exclude downloaded model assets in engines
+cogstream/engine/*/model/
+
 # Don't store the results of the simulation in the Repo
 !results/.gitkeep
 #results/

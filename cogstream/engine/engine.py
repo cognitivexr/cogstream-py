@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Tuple, Dict
+from typing import Tuple
 
 
 class StreamType(Enum):
@@ -30,3 +30,8 @@ class Engine:
     def transformation(self) -> Transformation:
         raise NotImplementedError
 
+    def setup(self):
+        raise NotImplementedError
+
+    def inference(self, frame):
+        raise NotImplementedError

@@ -2,8 +2,52 @@ from typing import Tuple
 
 from cogstream.engine import Engine, Colorspace, Transformation
 
+driver = None
+
 
 class YoloEngine(Engine):
+
+    @property
+    def driver(self):
+        global driver
+        return driver
+
+    def __init__(self, use_tpu=False) -> None:
+        super().__init__()
+        self._do_inference = None
+        self.use_tpu = use_tpu
+        self.anchors = None
+        self.classes = None
+
+    def setup(self):
+        if self._do_inference is not None:
+            return
+
+        global driver
+        if driver is None:
+            import cogstream.engine.yolo.tflite as driver_import
+            driver = driver_import
+            driver.require_model()
+
+        interpreter = driver.make_interpreter(driver.path_model, use_tpu=self.use_tpu)
+        interpreter.allocate_tensors()
+
+        anchors = driver.get_anchors(driver.path_anchors)
+        classes = driver.get_classes(driver.path_classes)
+
+        self.anchors = anchors
+        self.classes = classes
+
+        n_classes = len(classes)
+
+        def do_inference(frame):
+            return driver.inference(interpreter, frame, anchors, n_classes, threshold=0.25)
+
+        self._do_inference = do_inference
+
+    def inference(self, frame):
+        return self._do_inference(frame)
+
     def shape(self) -> Tuple[int, int]:
         return 416, 416
 
