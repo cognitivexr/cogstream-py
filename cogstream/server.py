@@ -1,7 +1,8 @@
-import json
 import logging
 import socket
 import time
+
+import jsonpickle
 
 from cogstream.engine import load_engine
 from cogstream.net import send_packet, recv_packet, recv_message, send_message
@@ -11,12 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 def serialize_result(result):
-    # TODO: serialize the result properly
+    then = time.time()
 
-    boxes, scores, classes = result
-    scores = [float(x) for x in scores]
-    classes = [int(x) for x in classes]
-    payload = json.dumps({'boxes': '', 'scores': scores, 'classes': classes}).encode('UTF-8')
+    # TODO: serialize the result properly
+    r = jsonpickle.encode(result)
+    payload = r.encode('UTF-8')
+
+    logger.debug('result serialization took %.2fms', ((time.time() - then) * 1000))
 
     return payload
 

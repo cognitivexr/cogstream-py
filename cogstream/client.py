@@ -1,6 +1,8 @@
 import logging
 import socket
 
+import jsonpickle
+
 from cogstream.engine import StreamType
 from cogstream.net import recv_packet, send_packet, send_message, recv_message
 from cogstream.protocol import StartMessage, FormatMessage, TransformResponseMessage, serialize_image
@@ -58,4 +60,9 @@ class Client:
     def request(self, frame):
         payload = serialize_image(frame)
         send_packet(self.sock, payload)
-        return recv_packet(self.sock)
+        result = recv_packet(self.sock)
+
+        # TODO: deserialize the result properly
+        result = jsonpickle.decode(result.decode('UTF-8'))
+
+        return result
