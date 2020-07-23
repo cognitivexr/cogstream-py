@@ -35,6 +35,7 @@ def main():
     parser.add_argument('--source', type=str, help='frame source (image, directory, camera, ...)', required=True)
     parser.add_argument('--host', type=str, help='the address to connect to', default='127.0.0.1')
     parser.add_argument('--port', type=int, help='the port to expose the camera feed on (default 53210)', default=53210)
+    parser.add_argument('--engine', type=str, help='which engine to use (yolo|mobilenet|...)', default='mobilenet')
 
     logging.basicConfig(level=logging.INFO)
 
@@ -42,7 +43,7 @@ def main():
 
     address = (args.host, args.port)
 
-    c = Client(address)
+    c = Client(address, args.engine)
     c.open()
 
     if not c.handshake:

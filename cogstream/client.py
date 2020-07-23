@@ -9,11 +9,12 @@ logger = logging.getLogger(__name__)
 
 
 class Client:
-    def __init__(self, address) -> None:
+    def __init__(self, address, engine) -> None:
         super().__init__()
         self.address = address
         self.sock = None
         self.handshake = False
+        self.engine = engine
 
     def open(self):
         if self.sock is not None:
@@ -26,7 +27,7 @@ class Client:
 
         try:
             # client: startstream ...
-            start_msg = StartMessage(StreamType.frames, 'yolo')  # TODO: pass engine
+            start_msg = StartMessage(StreamType.frames, self.engine)
             logger.info('sending: %s', start_msg)
             send_message(sock, start_msg)
 
