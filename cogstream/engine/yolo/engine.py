@@ -1,3 +1,4 @@
+import os
 from typing import Tuple
 
 from cogstream.engine import Engine, Colorspace, Transformation
@@ -12,10 +13,10 @@ class YoloEngine(Engine):
         global driver
         return driver
 
-    def __init__(self, use_tpu=False) -> None:
+    def __init__(self, use_tpu=None) -> None:
         super().__init__()
         self._do_inference = None
-        self.use_tpu = use_tpu
+        self.use_tpu = use_tpu if use_tpu is not None else bool(os.getenv('cogstream_tpu', False))
         self.anchors = None
         self.classes = None
 
