@@ -1,7 +1,11 @@
 import logging
 import socket
+import threading
+import time
+from queue import Queue
 
 import jsonpickle
+from PIL import Image
 
 from cogstream.engine import StreamType
 from cogstream.net import recv_packet, send_packet, send_message, recv_message
@@ -66,3 +70,57 @@ class Client:
         result = jsonpickle.decode(result.decode('UTF-8'))
 
         return result
+
+
+class ThreadedProcessor:
+
+    def __init__(self, client, threads=1) -> None:
+        super().__init__()
+        self.source = Queue()
+        self.sink = Queue()
+        self.client = client
+        self.num_threads = threads
+        self.threads = None
+
+    def start(self):
+        self.threads = [threading.Thread(target=self.run) for _ in range(self.num_threads)]
+
+        for t in self.threads:
+            t.start()
+
+    def shutdown(self, timeout=None):
+        for _ in self.threads:
+            self.source.put_nowait((-1, None))
+
+        for t in self.threads:
+            try:
+                t.join(timeout)
+            except:
+                logger.warning('timeout joining worker thread')
+
+    def run(self):
+        logger.info('starting processor ...')
+        source = self.source
+        client = self.client
+        sink = self.sink
+
+        if logger.isEnabledFor(logging.DEBUG):
+            while True:
+                then = time.time()
+                i, frame = source.get()
+                if i == -1:
+                    logger.debug('poison received, processor returning')
+                    break
+
+                response = client.request(Image.fromarray(frame))
+                logger.debug('%010d: %s (%.2fms) (qsize=%d)', i, response, ((time.time() - then) * 1000),
+                             source.qsize())
+                sink.put(response)
+        else:
+            while True:
+                i, frame = source.get()
+                if i == -1:
+                    break
+
+                response = client.request(Image.fromarray(frame))
+                sink.put(response)

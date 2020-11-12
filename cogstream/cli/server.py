@@ -8,7 +8,7 @@ def main():
     parser.add_argument('--bind', type=str, help='the address to bind to', default='0.0.0.0')
     parser.add_argument('--port', type=int, help='the port to expose the camera feed on (default 53210)', default=53210)
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     args = parser.parse_args()
 
