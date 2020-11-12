@@ -26,7 +26,11 @@ def serialize_result(result):
 def start_stream(conn, engine, do_transform=False):
     while True:
         then = time.time()
-        buf = recv_packet(conn)
+        try:
+            buf = recv_packet(conn)
+        except ConnectionResetError:
+            logger.debug('stopping stream due to ConnectionResetError')
+            break
         if not buf:
             logger.debug('stopping stream')
             break
