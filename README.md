@@ -28,6 +28,10 @@ Classify all images in a directory `./images/` with a pre-trained mobilenet mode
 
 Pass the `--host <ip>` flag if the server is running over the network.
 
+Run emotion detection from camera
+
+    python -m cogstream.cli.client --engine ferplus --source camera
+
 
 Setup individual ML capabilities
 --------------------------------
