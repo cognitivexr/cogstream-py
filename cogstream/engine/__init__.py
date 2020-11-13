@@ -1,4 +1,5 @@
 from cogstream.engine.engine import StreamType, Colorspace, Transformation, Engine
+from cogstream.engine.ferplus.engine import FerplusEngine
 from cogstream.engine.mobilenet.engine import MobileNetEngine
 from cogstream.engine.yolo.engine import YoloEngine
 from cogstream.engine.debug.engine import DebugEngine
@@ -16,7 +17,8 @@ __all__ = [
 _engines = {
     'debug': DebugEngine,
     'yolo': YoloEngine,
-    'mobilenet': MobileNetEngine
+    'mobilenet': MobileNetEngine,
+    'ferplus': FerplusEngine,
 }
 
 _running = dict()
