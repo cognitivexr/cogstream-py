@@ -40,11 +40,14 @@ def recv(sock, n):
     return data
 
 
-def recv_packet(sock):
+def recv_packet(sock, big_endian=True):
     # Read message length and unpack it into an integer
     raw_msglen = recv(sock, 4)
     if not raw_msglen:
         return None
-    msglen = struct.unpack('>I', raw_msglen)[0]
+    if big_endian:
+        msglen = struct.unpack('>I', raw_msglen)[0]
+    else:
+        msglen = struct.unpack('>I', raw_msglen)[0]
     # Read the message data
     return recv(sock, msglen)
